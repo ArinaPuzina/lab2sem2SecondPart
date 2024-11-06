@@ -7,14 +7,13 @@
 #include "Hash.hpp"
 #include <sstream>  
 using namespace std;
-Map<string> tree;  // Храним имя родителя и список его потомков (в виде строки)
-Map<int> descendantsCount;  // Хэш-таблица для подсчета потомков
+
 
 bool isValidXML(const string& s) {
-    Stack<string> tags;//стек тегов
+    Stack<string> tags;  // Стек для тегов
     int i = 0, n = s.length();
 
-    while (i < n) {//открывающийся или закрывающийся тег
+    while (i < n) {
         if (s[i] == '<') {
             int j = i + 1;
             bool isClosingTag = false;
@@ -23,60 +22,65 @@ bool isValidXML(const string& s) {
                 isClosingTag = true;
                 j++;
             }
+
             string tag;
             while (j < n && s[j] != '>') {
-                tag += s[j++];//собираем имя тега
+                tag += s[j++];  // Собираем имя тега
             }
-            if (tag.empty() || (isClosingTag && tags.Empty())) {//если тег пуст то неверно
+
+            if (tag.empty() || (isClosingTag && tags.Empty())) {
                 return false;
             }
 
-            if (isClosingTag) {  // если это закрывающий тег
+            if (isClosingTag) {  // Закрывающий тег
                 if (tags.Empty() || tags.top() != tag) {
                     return false;
                 }
-                tags.pop();//убираем открывающий тег из стека
+                tags.pop();  // Убираем открывающий тег из стека
             }
-            else { //если это открывающий тег
-                tags.push(tag);//обавляем открывающий тег в стек
+            else {  // Открывающий тег
+                tags.push(tag);
             }
-            i = j + 1; //переходим к следующему символу после закрывающей угловой скобки '>'
+
+            i = j + 1;  // Переходим к следующему символу после угловой скобки
         }
         else {
-            i++;//если не скобка проверяем next символ
+            i++;  // Если не угловая скобка, продолжаем проверку
         }
     }
-    return tags.Empty();
+
+    return tags.Empty();  // Если стек пуст, XML валиден
 }
 
+// Восстановление XML
+string restoreXML(string s) {
+    // Проходим по всем символам и пытаемся заменить их
+    for (int i = 0; i < s.size(); ++i) {
+        char originalChar = s[i];
 
-    string restoreXML(string s) {
-        //собираем все уникальные символы, встречающиеся в строке
-        Set<char> validChars;
-        for (char ch : s) {
-            if (ch != '<' && ch != '>' && ch != '/') {
-                validChars.put(ch);
+        // Пробуем заменить символ на все возможные буквы латинского алфавита (a-z)
+        // и на символы <, >, / (т.к. они могут быть повреждены)
+        for (char ch = 'a'; ch <= 'z'; ++ch) {
+            s[i] = ch;  // Меняем символ на текущую букву
+
+            if (isValidXML(s)) {
+                return s;  // Если строка валидна, возвращаем ее
             }
         }
-        //пробуем заменить каждый символ на все возможные символы из validChars
-        for (int i = 0; i < s.size(); ++i) {
-            char originalChar = s[i];
 
-            //перебираем только символы, которые встречаются в строке
-            Vector<char> validCharsVec = validChars.values();
-            for (char ch : validCharsVec) {
-                s[i] = ch; //заменяем символ на текущий из validChars
+        // Также пробуем заменить на <, > и /
+        for (char ch : {'<', '>', '/'}) {
+            s[i] = ch;  // Меняем символ на текущий
 
-                if (isValidXML(s)) {
-                    return s; //если строка стала корректной, возвращаем ее
-                }
+            if (isValidXML(s)) {
+                return s;  // Если строка валидна, возвращаем ее
             }
-
-            s[i] = originalChar; //восстанавливаем исходный символ
         }
 
-        return ""; 
-    
+        s[i] = originalChar;  // Восстанавливаем исходный символ, если замена не помогла
+    }
+
+    return "";  // Если не удалось восстановить строку, возвращаем пустую строку
 }
 void task1() {
     string xmlString;
@@ -191,25 +195,27 @@ void task5() {
     findLeaves(tree.root);
 }
 
-//функция для подсчета потомков у данного человека
 int countDescendants(const string& name, Map<int>& descendantsCount, Map<string>& tree) {
+    // Если количество потомков для этого имени уже вычислено, возвращаем кэшированное значение
     if (descendantsCount.contains(name)) {
-        return descendantsCount.get(name);//если уже посчитано, возвращаем результат
+        return descendantsCount.get(name);
     }
 
     int count = 0;
+
+    // Если в дереве есть потомки для этого имени, считаем их количество
     if (tree.contains(name)) {
-        //получаем список потомков для текущего человека
-        string children = tree.get(name);//строка с именами потомков
-        stringstream ss(children);//разбиваем строку на имена потомков
+        string children = tree.get(name); // Получаем строку с детьми
+        stringstream ss(children); // Разбиваем строку на детей
         string child;
 
-        //для каждого потомка считаем количество его потомков
+        // Рекурсивно считаем количество потомков для каждого ребенка
         while (ss >> child) {
-            count += 1 + countDescendants(child, descendantsCount, tree);
+            count += 1 + countDescendants(child, descendantsCount, tree); // 1 за ребенка + его потомков
         }
     }
 
+    // Сохраняем количество потомков для этого имени в кэш
     descendantsCount.put(name, count);
     return count;
 }
@@ -220,38 +226,39 @@ void task6() {
     cin.ignore();
     string child, parent;
 
-    Map<string> tree;//храним имя родителя и список его потомков (в виде строки)
-    Map<int> descendantsCount;//хэш-таблица для подсчета потомков
+    Map<string> tree;  // Дерево, храним родителя и его детей
+    Map<int> descendantsCount;  // Хэш-таблица для подсчета потомков
 
-    //чтение данных и построение дерева
+    // Чтение данных и построение дерева
     for (int i = 0; i < N - 1; ++i) {
         string line;
         getline(cin, line);
         stringstream ss(line);
-        ss >> child >> parent;//считываем по пробелу
-        tree.put(parent, tree.contains(parent) ? tree.get(parent) + child + " " : child + " "); 
-        //добавляем потомка(строка потомков) к родителю 
+        ss >> child >> parent; // Разбираем пару child-parent
+        tree.put(parent, tree.contains(parent) ? tree.get(parent) + child + " " : child + " "); // Добавляем ребенка к родителю
     }
 
-    Set<string> allNames; //множество для хранения уникальных имён
+    Set<string> allNames; // Множество для уникальных имен
 
-    //добавляем имена всех родителей и потомков в список
+    // Добавляем имена всех родителей и детей в множество
     for (int i = 0; i < tree.getCap(); ++i) {
         auto current = tree.getData()[i];
         while (current != nullptr) {
-            allNames.put(current->key);//добавляем родителя
+            allNames.put(current->key); // Добавляем имя родителя
             stringstream ss(current->value);
             string child;
             while (ss >> child) {
-                allNames.put(child);//добавляем потомков
+                allNames.put(child); // Добавляем имя ребенка
             }
             current = current->next;
         }
     }
-    cout << "---------------------results:-------------------- " << endl;
-    //для каждого человека выводим его количество потомков
+
+    // Сортируем имена в алфавитном порядке
     Vector<string> allNamesvec = allNames.values();
     allNamesvec.sort();
+    // Выводим количество потомков для каждого уникального имени
+    cout << "---------------------results:-------------------- " << endl;
     for (const string& name : allNamesvec) {
         cout << name << " " << countDescendants(name, descendantsCount, tree) << endl;
     }
